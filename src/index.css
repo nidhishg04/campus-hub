@@ -1,1 +1,221 @@
-[FILE_TOO_LARGE]: The combined read_files output exceeded the 100,000 character hard limit. This file was truncated after 0 characters. Read it separately or use code_search for the relevant section.
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ── Light: Neo-brutalist ── */
+:root {
+  --radius: 0.5rem;
+  --background: #FAFAFA;
+  --foreground: #111111;
+  --card: #FFFFFF;
+  --card-foreground: #111111;
+  --popover: #FFFFFF;
+  --popover-foreground: #111111;
+  --primary: #111111;
+  --primary-foreground: #FFEF00;
+  --secondary: #FFEF00;
+  --secondary-foreground: #111111;
+  --muted: #F0F0F0;
+  --muted-foreground: #444444;
+  --accent: #90E0EF;
+  --accent-foreground: #111111;
+  --destructive: #FF6B6B;
+  --border: #111111;
+  --input: #E5E5E5;
+  --ring: #111111;
+  --chart-1: #FFEF00;
+  --chart-2: #90E0EF;
+  --chart-3: #FF6B6B;
+  --chart-4: #A8DADC;
+  --chart-5: #CDB4DB;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111111;
+  --sidebar-primary: #111111;
+  --sidebar-primary-foreground: #FFEF00;
+  --sidebar-accent: #FFEF00;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: #111111;
+  --sidebar-ring: #111111;
+}
+
+/* ── Dark: Neo-brutalist ── */
+.dark {
+  --background: #0D1117;
+  --foreground: #F0F0F0;
+  --card: #161B22;
+  --card-foreground: #F0F0F0;
+  --popover: #161B22;
+  --popover-foreground: #F0F0F0;
+  --primary: #FFEF00;
+  --primary-foreground: #111111;
+  --secondary: #90E0EF;
+  --secondary-foreground: #111111;
+  --muted: #1C2128;
+  --muted-foreground: #8B949E;
+  --accent: #FF6B6B;
+  --accent-foreground: #111111;
+  --destructive: #FF6B6B;
+  --border: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #FFEF00;
+  --chart-1: #FFEF00;
+  --chart-2: #90E0EF;
+  --chart-3: #FF6B6B;
+  --chart-4: #A8DADC;
+  --chart-5: #CDB4DB;
+  --sidebar: #161B22;
+  --sidebar-foreground: #F0F0F0;
+  --sidebar-primary: #FFEF00;
+  --sidebar-primary-foreground: #111111;
+  --sidebar-secondary: #90E0EF;
+  --sidebar-secondary-foreground: #111111;
+  --sidebar-accent: #FFEF00;
+  --sidebar-accent-foreground: #111111;
+  --sidebar-border: rgba(255, 255, 255, 0.15);
+  --sidebar-ring: #FFEF00;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background-color: #FFEF00;
+  color: #111111;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Neo-brutalist utilities — theme-aware
+   ═══════════════════════════════════════════════════════════ */
+
+.brutal-card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 2px solid var(--border);
+}
+.brutal-shadow {
+  box-shadow: 4px 4px 0px var(--border);
+}
+.brutal-shadow-sm {
+  box-shadow: 2px 2px 0px var(--border);
+}
+.brutal-shadow-lg {
+  box-shadow: 6px 6px 0px var(--border);
+}
+
+.brutal-btn {
+  border: 2px solid var(--border);
+  box-shadow: 3px 3px 0px var(--border);
+  transition: all 0.15s ease;
+}
+.brutal-btn:hover {
+  box-shadow: 1px 1px 0px var(--border);
+  transform: translate(2px, 2px);
+}
+.brutal-btn:active {
+  box-shadow: 0px 0px 0px var(--border);
+  transform: translate(3px, 3px);
+}
+
+/* Color cards */
+.brutal-yellow {
+  background: #FFEF00;
+  color: #111111;
+  border-color: var(--border);
+}
+.brutal-blue {
+  background: #90E0EF;
+  color: #111111;
+  border-color: var(--border);
+}
+.brutal-coral {
+  background: #FF6B6B;
+  color: #111111;
+  border-color: var(--border);
+}
+.brutal-lavender {
+  background: #CDB4DB;
+  color: #111111;
+  border-color: var(--border);
+}
+.brutal-mint {
+  background: #A8DADC;
+  color: #111111;
+  border-color: var(--border);
+}
+
+.dark .brutal-yellow { background: #FFEF00; color: #111111; border-color: var(--border); }
+.dark .brutal-blue   { background: #90E0EF; color: #111111; border-color: var(--border); }
+.dark .brutal-coral  { background: #FF6B6B; color: #111111; border-color: var(--border); }
+.dark .brutal-lavender { background: #CDB4DB; color: #111111; border-color: var(--border); }
+.dark .brutal-mint   { background: #A8DADC; color: #111111; border-color: var(--border); }
+
+/* Tags */
+.brutal-tag-yellow { background: #FFEF00; color: #111111; border-color: var(--border); }
+.brutal-tag-blue   { background: #90E0EF; color: #111111; border-color: var(--border); }
+.brutal-tag-coral  { background: #FF6B6B; color: #111111; border-color: var(--border); }
+.brutal-tag-lavender { background: #CDB4DB; color: #111111; border-color: var(--border); }
+
+/* Primary CTA */
+.brutal-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--border);
+}
+.brutal-primary:hover {
+  background: var(--primary);
+  filter: brightness(0.9);
+}

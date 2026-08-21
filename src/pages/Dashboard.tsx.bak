@@ -1145,6 +1145,1992 @@ function AdminPanel() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold"
+      <h2 className="text-lg font-semibold">Admin Panel</h2>
 
-[FILE_TOO_LARGE]: The combined read_files output exceeded the 100,000 character hard limit. This file was truncated after 44,097 characters. Read it separately or use code_search for the relevant section.
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          { label: "Students", value: stats?.students ?? 0 },
+          { label: "Faculty", value: stats?.faculty ?? 0 },
+          { label: "Coordinators", value: stats?.coordinators ?? 0 },
+          { label: "Sessions", value: sessions?.length ?? 0 },
+          { label: "Assignments", value: assignments?.length ?? 0 },
+          { label: "Events", value: events?.length ?? 0 },
+          { label: "Placements", value: placements?.length ?? 0 },
+          { label: "Total Users", value: stats?.total ?? 0 },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl border border-border/50 bg-card p-3 text-center">
+            <div className="text-xl font-bold">{s.value}</div>
+            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* User Management */}
+      <div className="rounded-xl border border-border/50 bg-card p-4">
+        <h3 className="mb-3 font-medium flex items-center gap-2">
+          <UserCog className="h-4 w-4" />
+          User Management
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
+                <th className="pb-2 pr-4">Name</th>
+                <th className="pb-2 pr-4">Email</th>
+                <th className="pb-2 pr-4">Role</th>
+                <th className="pb-2 pr-4">Department</th>
+                <th className="pb-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!allUsers ? (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                    Loading…
+                  </td>
+                </tr>
+              ) : allUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                allUsers.slice(0, 50).map((u) => (
+                  <>
+                    <tr key={u._id} className="border-b border-border/30">
+                      <td className="py-2 pr-4 font-medium">{u.name || "—"}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{u.email || "—"}</td>
+                      <td className="py-2 pr-4">
+                        <span className="rounded-full bg-[#FF6B6B]/10 px-2 py-0.5 text-xs font-medium capitalize text-violet-600">
+                          {u.role || "—"}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-muted-foreground">{u.department || "—"}</td>
+                      <td className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            onClick={() =>
+                              setExpandedUser(expandedUser === u._id ? null : u._id)
+                            }
+                          >
+                            <UserCog className="h-3 w-3" />
+                          </Button>
+                          {u._id !== user?._id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Delete user ${u.name || u.email}?`)) {
+                                  removeUser({ targetUserId: u._id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedUser === u._id && (
+                      <tr key={`${u._id}-edit`}>
+                        <td colSpan={5} className="py-2 px-4 bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">Change role:</span>
+                            {(["student", "faculty", "coordinator", "admin"] as const).map(
+                              (role) => (
+                                <Button
+                                  key={role}
+                                  size="sm"
+                                  variant={u.role === role ? "default" : "ghost"}
+                                  className="h-7 text-xs capitalize"
+                                  onClick={() =>
+                                    updateRole({
+                                      targetUserId: u._id,
+                                      role,
+                                    })
+                                  }
+                                >
+                                  {role}
+                                </Button>
+                              ),
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────── Global Search ────────────────────────
+function GlobalSearchPanel() {
+  const [query, setQuery] = useState("");
+  const announcements = useQuery(
+    api.announcements.search,
+    query.length > 1 ? { query } : "skip",
+  );
+  const events = useQuery(api.events.list);
+  const placements = useQuery(api.placements.list);
+  const assignments = useQuery(api.assignments.list);
+
+  const q = query.toLowerCase();
+  const matchedEvents = events?.filter(
+    (e) =>
+      e.title.toLowerCase().includes(q) ||
+      e.description.toLowerCase().includes(q) ||
+      e.venue.toLowerCase().includes(q),
+  );
+  const matchedPlacements = placements?.filter(
+    (p) =>
+      p.company.toLowerCase().includes(q) ||
+      p.jobRole.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q),
+  );
+  const matchedAssignments = assignments?.filter(
+    (a) =>
+      a.title.toLowerCase().includes(q) ||
+      a.subject.toLowerCase().includes(q) ||
+      a.description.toLowerCase().includes(q),
+  );
+
+  const totalResults =
+    (announcements?.length ?? 0) +
+    (matchedEvents?.length ?? 0) +
+    (matchedPlacements?.length ?? 0) +
+    (matchedAssignments?.length ?? 0);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Global Search</h2>
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search students, events, assignments, placements…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground"
+          autoFocus
+        />
+      </div>
+      {query.length > 1 && (
+        <p className="text-xs text-muted-foreground">{totalResults} result{totalResults !== 1 ? "s" : ""} found</p>
+      )}
+
+      {/* Announcements */}
+      {announcements && announcements.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Megaphone className="h-3.5 w-3.5" /> Announcements ({announcements.length})
+          </h3>
+          <div className="space-y-2">
+            {announcements.slice(0, 5).map((a) => (
+              <div key={a._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{a.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{a.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Events */}
+      {matchedEvents && matchedEvents.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" /> Events ({matchedEvents.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedEvents.slice(0, 5).map((e) => (
+              <div key={e._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{e.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {e.venue} · {e.date}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Placements */}
+      {matchedPlacements && matchedPlacements.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Briefcase className="h-3.5 w-3.5" /> Placements ({matchedPlacements.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedPlacements.slice(0, 5).map((p) => (
+              <div key={p._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">
+                  {p.company} — {p.jobRole}
+                </p>
+                <p className="text-xs text-muted-foreground">CTC: {p.ctc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Assignments */}
+      {matchedAssignments && matchedAssignments.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" /> Assignments ({matchedAssignments.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedAssignments.slice(0, 5).map((a) => (
+              <div key={a._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{a.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {a.subject} · Due {a.deadline}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {query.length > 1 && totalResults === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <Search className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No results found for "{query}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Settings Panel ────────────────────────
+function SettingsPanel({ onSignOut }: { onSignOut: () => void }) {
+  const { user } = useAuth();
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Settings</h2>
+
+      {/* Profile */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Profile
+        </h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">Name:</span>{" "}
+            {user?.name || "Not set"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Email:</span>{" "}
+            {user?.email || "Not set"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Role:</span>{" "}
+            <span className="capitalize">{user?.role || "Not set"}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Department:</span>{" "}
+            {user?.department || "Not set"}
+          </div>
+          {user?.rollNumber && (
+            <div>
+              <span className="text-muted-foreground">Roll Number:</span>{" "}
+              {user.rollNumber}
+            </div>
+          )}
+          {user?.semester && (
+            <div>
+              <span className="text-muted-foreground">Semester:</span>{" "}
+              {user.semester}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Preferences */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Settings className="h-4 w-4" />
+          Preferences
+        </h3>
+        <div className="flex items-center justify-between text-sm">
+          <span>Dark Mode</span>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Account
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Sign out of your Campus Hub account on this device.
+        </p>
+        <Button
+          variant="outline"
+          className="text-destructive hover:text-destructive"
+          onClick={onSignOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────── Tab Panels Map ────────────────────────
+function tabPanels(activeTab: Tab): ReactNode {
+  switch (activeTab) {
+    case "announcements":
+      return <AnnouncementsTab />;
+    case "attendance":
+      return <AttendanceTab />;
+    case "assignments":
+      return <AssignmentsTab />;
+    case "events":
+      return <EventsTab />;
+    case "placements":
+      return <PlacementsTab />;
+    case "notifications":
+      return <NotificationsTab />;
+    case "admin":
+      return <AdminPanel />;
+    case "search":
+      return <GlobalSearchPanel />;
+    case "settings":
+      return <SettingsPanel onSignOut={() => {}} />;
+    default:
+      return <AnnouncementsTab />;
+  }
+}
+
+// ──────────────────────── Main Dashboard ────────────────────────
+export default function Dashboard() {
+  const { user, signOut, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>("announcements");
+  const unreadCount = useQuery(api.notifications.unreadCount);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.role) return <RoleSelection />;
+
+  const isFaculty =
+    user.role === "faculty" || user.role === "admin" || user.role === "coordinator";
+  let availableTabs: readonly string[];
+  switch (user.role) {
+    case "admin":
+      availableTabs = ["announcements","attendance","assignments","events","placements","notifications","admin"] as const;
+      break;
+    case "coordinator":
+      availableTabs = ["announcements","attendance","assignments","events","placements","notifications"] as const;
+      break;
+    case "faculty":
+      availableTabs = ["announcements","attendance","assignments","events","placements","notifications"] as const;
+// ──────────────────────── Attendance Tab ────────────────────────
+function AttendanceTab() {
+  const { user } = useAuth();
+  const isFaculty =
+    user?.role === "faculty" || user?.role === "admin";
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Attendance</h2>
+        {isFaculty && (
+          <Button
+            size="sm"
+            onClick={() => setShowCreate(!showCreate)}
+            className="gap-1.5"
+          >
+            {showCreate ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showCreate ? "Cancel" : "New Session"}
+          </Button>
+        )}
+      </div>
+      {isFaculty && showCreate && <AttendanceCreateForm onDone={() => setShowCreate(false)} />}
+      {isFaculty ? <FacultyAttendanceView /> : <StudentAttendanceView />}
+    </div>
+  );
+}
+
+function AttendanceCreateForm({ onDone }: { onDone: () => void }) {
+  const createSession = useMutation(api.attendance.createSession);
+  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [dept, setDept] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !subject) return;
+    setSubmitting(true);
+    try {
+      await createSession({
+        title,
+        subject,
+        date,
+        department: dept || undefined,
+      });
+      onDone();
+    } catch {
+      // error handled by Convex
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Session Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Morning Lecture"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Subject</label>
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="e.g. Data Structures"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Department</label>
+          <select
+            value={dept}
+            onChange={(e) => setDept(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+          >
+            <option value="">All</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Mechanical">Mechanical</option>
+            <option value="Civil">Civil</option>
+            <option value="Electrical">Electrical</option>
+          </select>
+        </div>
+      </div>
+      <Button type="submit" size="sm" disabled={submitting}>
+        {submitting ? "Creating…" : "Create Session"}
+      </Button>
+    </form>
+  );
+}
+
+function FacultyAttendanceView() {
+  const sessions = useQuery(api.attendance.listSessions);
+
+  return (
+    <div className="space-y-3">
+      {!sessions ? (
+        [1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)
+      ) : sessions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <ClipboardCheck className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No attendance sessions yet. Create one above.</p>
+        </div>
+      ) : (
+        sessions.map((s) => (
+          <div key={s._id} className="rounded-xl border border-border/50 bg-card p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{s.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {s.subject} · {s.date}
+                  {s.department ? ` · ${s.department}` : ""}
+                </p>
+              </div>
+              <span className="rounded-full bg-[#FF6B6B]/10 px-2.5 py-0.5 text-xs font-medium text-violet-600">
+                Session
+              </span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function StudentAttendanceView() {
+  const myStats = useQuery(api.attendance.myStats);
+  const myAttendance = useQuery(api.attendance.myAttendance);
+  const sessions = useQuery(api.attendance.listSessions);
+
+  return (
+    <div className="space-y-4">
+      {/* Stats Card */}
+      <div className="rounded-xl border border-border/50 bg-card p-4">
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0">
+            <svg className="h-16 w-16 -rotate-90" viewBox="0 0 36 36">
+              <circle
+                cx="18"
+                cy="18"
+                r="15.915"
+                fill="none"
+                stroke="currentColor"
+                className="text-muted/50"
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.915"
+                fill="none"
+                stroke="currentColor"
+                className="text-violet-500"
+                strokeWidth="2.5"
+                strokeDasharray={`${myStats?.percentage ?? 0} 100`}
+                strokeLinecap="round"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+              {myStats?.percentage ?? 0}%
+            </span>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Overall Attendance</p>
+            <p className="text-sm">
+              {myStats?.present ?? 0} present out of {myStats?.total ?? 0} sessions
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* History */}
+      <h3 className="text-sm font-medium text-muted-foreground">Session History</h3>
+      <div className="space-y-2">
+        {!sessions ? (
+          [1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)
+        ) : sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-8">
+            <ClipboardCheck className="mb-2 h-6 w-6 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">No sessions yet</p>
+          </div>
+        ) : (
+          sessions.map((s) => {
+            const record = myAttendance?.find((r) => r.sessionId === s._id);
+            return (
+              <div key={s._id} className="rounded-xl border border-border/50 bg-card p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{s.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.subject} · {s.date}
+                    </p>
+                  </div>
+                  {record ? (
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        record.present
+                          ? "bg-emerald-500/10 text-emerald-600"
+                          : "bg-red-500/10 text-red-600"
+                      }`}
+                    >
+                      {record.present ? "Present" : "Absent"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Not marked</span>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────── Assignments Tab ────────────────────────
+function AssignmentsTab() {
+  const { user } = useAuth();
+  const isFaculty =
+    user?.role === "faculty" || user?.role === "admin";
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Assignments</h2>
+        {isFaculty && (
+          <Button size="sm" onClick={() => setShowCreate(!showCreate)} className="gap-1.5">
+            {showCreate ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showCreate ? "Cancel" : "New Assignment"}
+          </Button>
+        )}
+      </div>
+      {isFaculty && showCreate && <AssignmentCreateForm onDone={() => setShowCreate(false)} />}
+      <AssignmentList isFaculty={isFaculty} />
+    </div>
+  );
+}
+
+function AssignmentCreateForm({ onDone }: { onDone: () => void }) {
+  const create = useMutation(api.assignments.create);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [subject, setSubject] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [rubric, setRubric] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !description || !subject || !deadline) return;
+    setSubmitting(true);
+    try {
+      await create({ title, description, subject, deadline, rubric: rubric || undefined });
+      onDone();
+    } catch {
+      // error handled by Convex
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Binary Tree Implementation"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the assignment requirements…"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Subject</label>
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="e.g. Data Structures"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Deadline</label>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Rubric (optional)</label>
+          <textarea
+            value={rubric}
+            onChange={(e) => setRubric(e.target.value)}
+            placeholder="Grading criteria…"
+            rows={2}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground"
+          />
+        </div>
+      </div>
+      <Button type="submit" size="sm" disabled={submitting}>
+        {submitting ? "Posting…" : "Post Assignment"}
+      </Button>
+    </form>
+  );
+}
+
+function AssignmentList({ isFaculty }: { isFaculty: boolean }) {
+  const assignments = useQuery(api.assignments.list);
+  const mySubmissions = useQuery(api.assignments.mySubmissions);
+  const [submittingFor, setSubmittingFor] = useState<string | null>(null);
+  const [submissionUrl, setSubmissionUrl] = useState("");
+  const submitMutation = useMutation(api.assignments.submit);
+
+  const handleSubmit = async (assignmentId: string) => {
+    if (!submissionUrl) return;
+    try {
+      await submitMutation({
+        assignmentId: assignmentId as Parameters<typeof submitMutation>[0]["assignmentId"],
+        submissionUrl,
+      });
+      setSubmittingFor(null);
+      setSubmissionUrl("");
+    } catch {
+      // handled by Convex
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {!assignments ? (
+        [1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+      ) : assignments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <BookOpen className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No assignments posted yet</p>
+        </div>
+      ) : (
+        assignments.map((a) => {
+          const submission = mySubmissions?.find((s) => s.assignmentId === a._id);
+          const isOverdue = Date.now() > new Date(a.deadline).getTime();
+          return (
+            <div key={a._id} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{a.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {a.subject} · by {a.facultyName}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{a.description}</p>
+                </div>
+                <div className="ml-3 flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+                    Due {a.deadline}
+                  </span>
+                  {isOverdue && (
+                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600">
+                      Overdue
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Student submission status */}
+              {!isFaculty && (
+                <div>
+                  {submission ? (
+                    <div className="rounded-lg bg-muted/50 p-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span
+                          className={`font-medium ${
+                            submission.status === "graded"
+                              ? "text-emerald-600"
+                              : submission.status === "late"
+                                ? "text-amber-600"
+                                : "text-muted-foreground"
+                          }`}
+                        >
+                          {submission.status === "graded"
+                            ? `Graded: ${submission.marks}/100`
+                            : submission.status === "late"
+                              ? "Submitted (late)"
+                              : "Submitted"}
+                        </span>
+                        {submission.feedback && (
+                          <span className="text-muted-foreground">{submission.feedback}</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : submittingFor === a._id ? (
+                    <div className="flex gap-2">
+                      <input
+                        value={submissionUrl}
+                        onChange={(e) => setSubmissionUrl(e.target.value)}
+                        placeholder="Paste submission URL (PDF, ZIP, or GitHub link)"
+                        className="flex h-9 flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                        autoFocus
+                      />
+                      <Button size="sm" onClick={() => handleSubmit(a._id)} disabled={!submissionUrl}>
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSubmittingFor(null);
+                          setSubmissionUrl("");
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSubmittingFor(a._id)}
+                    >
+                      Submit Solution
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Events Tab ────────────────────────
+function EventsTab() {
+  const { user } = useAuth();
+  const isOrganizer =
+    user?.role === "admin" || user?.role === "coordinator" || user?.role === "faculty";
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Events</h2>
+        {isOrganizer && (
+          <Button size="sm" onClick={() => setShowCreate(!showCreate)} className="gap-1.5">
+            {showCreate ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showCreate ? "Cancel" : "New Event"}
+          </Button>
+        )}
+      </div>
+      {isOrganizer && showCreate && <EventCreateForm onDone={() => setShowCreate(false)} />}
+      <EventsList />
+    </div>
+  );
+}
+
+function EventCreateForm({ onDone }: { onDone: () => void }) {
+  const createEvent = useMutation(api.events.create);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [venue, setVenue] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [seats, setSeats] = useState("100");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !description || !venue || !date || !deadline || !seats) return;
+    setSubmitting(true);
+    try {
+      await createEvent({
+        title,
+        description,
+        venue,
+        date,
+        time: time || undefined,
+        registrationDeadline: deadline,
+        totalSeats: parseInt(seats, 10),
+      });
+      onDone();
+    } catch {
+      // handled by Convex
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Event Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Annual Tech Fest"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the event…"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Venue</label>
+          <input
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+            placeholder="e.g. Auditorium A"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Total Seats</label>
+          <input
+            type="number"
+            value={seats}
+            onChange={(e) => setSeats(e.target.value)}
+            min="1"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Event Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Time (optional)</label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Registration Deadline</label>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+      </div>
+      <Button type="submit" size="sm" disabled={submitting}>
+        {submitting ? "Creating…" : "Create Event"}
+      </Button>
+    </form>
+  );
+}
+
+function EventsList() {
+  const events = useQuery(api.events.list);
+  const myRegistrations = useQuery(api.events.myRegistrations);
+  const register = useMutation(api.events.register);
+  const cancelReg = useMutation(api.events.cancelRegistration);
+  const { user } = useAuth();
+  const isStudent = user?.role === "student";
+
+  return (
+    <div className="space-y-3">
+      {!events ? (
+        [1, 2].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)
+      ) : events.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <CalendarDays className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No events scheduled</p>
+        </div>
+      ) : (
+        events.map((e) => {
+          const registered = myRegistrations?.some((r) => r.eventId === e._id);
+          const isFull = e.registeredCount >= e.totalSeats;
+          return (
+            <div key={e._id} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{e.title}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {e.venue}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" /> {e.date}
+                    </span>
+                    {e.time && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {e.time}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{e.description}</p>
+                </div>
+                <div className="ml-3 flex flex-col items-end gap-1 shrink-0">
+                  <span
+                    className={`text-xs font-medium ${
+                      isFull ? "text-red-500" : "text-muted-foreground"
+                    }`}
+                  >
+                    {e.registeredCount}/{e.totalSeats} seats
+                  </span>
+                </div>
+              </div>
+
+              {/* Tags */}
+              {e.tags && e.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {e.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-[#FF6B6B]/10 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Registration button */}
+              {isStudent && (
+                <div>
+                  {registered ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cancelReg({ eventId: e._id })}
+                      className="gap-1 text-destructive hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Cancel Registration
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isFull}
+                      onClick={() => register({ eventId: e._id })}
+                      className="gap-1"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      {isFull ? "Full" : "Register"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Placements Tab ────────────────────────
+function PlacementsTab() {
+  const { user } = useAuth();
+  const isFaculty = user?.role === "admin" || user?.role === "faculty";
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Placements</h2>
+        {isFaculty && (
+          <Button size="sm" onClick={() => setShowCreate(!showCreate)} className="gap-1.5">
+            {showCreate ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            {showCreate ? "Cancel" : "Post Listing"}
+          </Button>
+        )}
+      </div>
+      {isFaculty && showCreate && <PlacementCreateForm onDone={() => setShowCreate(false)} />}
+      <PlacementsList />
+    </div>
+  );
+}
+
+function PlacementCreateForm({ onDone }: { onDone: () => void }) {
+  const create = useMutation(api.placements.create);
+  const [company, setCompany] = useState("");
+  const [jobRole, setJobRole] = useState("");
+  const [description, setDescription] = useState("");
+  const [eligibility, setEligibility] = useState("");
+  const [ctc, setCtc] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!company || !jobRole || !description || !eligibility || !ctc || !deadline) return;
+    setSubmitting(true);
+    try {
+      await create({ company, jobRole, description, eligibility, ctc, deadline });
+      onDone();
+    } catch {
+      // handled by Convex
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Company</label>
+          <input
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="e.g. Google"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Job Role</label>
+          <input
+            value={jobRole}
+            onChange={(e) => setJobRole(e.target.value)}
+            placeholder="e.g. Software Engineer"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Job description and requirements…"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Eligibility</label>
+          <input
+            value={eligibility}
+            onChange={(e) => setEligibility(e.target.value)}
+            placeholder="e.g. CS, IT — CGPA ≥ 7.0"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">CTC</label>
+          <input
+            value={ctc}
+            onChange={(e) => setCtc(e.target.value)}
+            placeholder="e.g. ₹12 LPA"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Application Deadline</label>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            required
+          />
+        </div>
+      </div>
+      <Button type="submit" size="sm" disabled={submitting}>
+        {submitting ? "Posting…" : "Post Listing"}
+      </Button>
+    </form>
+  );
+}
+
+function PlacementsList() {
+  const placements = useQuery(api.placements.list);
+  const myApplications = useQuery(api.placements.myApplications);
+  const applyMutation = useMutation(api.placements.apply);
+  const { user } = useAuth();
+  const isStudent = user?.role === "student";
+
+  return (
+    <div className="space-y-3">
+      {!placements ? (
+        [1, 2].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)
+      ) : placements.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <Briefcase className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No placements posted yet</p>
+        </div>
+      ) : (
+        placements.map((p) => {
+          const applied = myApplications?.some((a) => a.placementId === p._id);
+          const appStatus = myApplications?.find((a) => a.placementId === p._id)?.status;
+          return (
+            <div key={p._id} className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">
+                    {p.company} — {p.jobRole}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" /> {p.ctc}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" /> {p.eligibility}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> Deadline: {p.deadline}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                </div>
+              </div>
+
+              {isStudent && (
+                <div>
+                  {applied ? (
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        appStatus === "selected"
+                          ? "bg-emerald-500/10 text-emerald-600"
+                          : appStatus === "shortlisted"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : appStatus === "rejected"
+                              ? "bg-red-500/10 text-red-600"
+                              : "bg-[#FF6B6B]/10 text-violet-600"
+                      }`}
+                    >
+                      {appStatus === "selected"
+                        ? "Selected!"
+                        : appStatus === "shortlisted"
+                          ? "Shortlisted"
+                          : appStatus === "rejected"
+                            ? "Not Selected"
+                            : "Applied"}
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => applyMutation({ placementId: p._id })}
+                      className="gap-1"
+                    >
+                      <Briefcase className="h-3.5 w-3.5" />
+                      Apply
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Notifications Tab ────────────────────────
+function NotificationsTab() {
+  const notifications = useQuery(api.notifications.list);
+  const unreadCount = useQuery(api.notifications.unreadCount);
+  const markRead = useMutation(api.notifications.markRead);
+  const markAllRead = useMutation(api.notifications.markAllRead);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Notifications</h2>
+        <div className="flex items-center gap-2">
+          {unreadCount !== undefined && unreadCount > 0 && (
+            <span className="rounded-full bg-[#FF6B6B]/10 px-2.5 py-0.5 text-xs font-medium text-violet-600">
+              {unreadCount} unread
+            </span>
+          )}
+          {unreadCount !== undefined && unreadCount > 0 && (
+            <Button size="sm" variant="outline" onClick={() => markAllRead()} className="text-xs">
+              Mark all read
+            </Button>
+          )}
+        </div>
+      </div>
+      {!notifications ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 rounded-xl" />
+          ))}
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <Bell className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No notifications yet</p>
+        </div>
+      ) : (
+        notifications.map((n) => (
+          <div
+            key={n._id}
+            className={`rounded-xl border p-4 cursor-pointer transition-colors ${
+              n.read
+                ? "border-border/50 bg-card"
+                : "border-violet-500/20 bg-[#FF6B6B]/5 hover:bg-[#FF6B6B]/10"
+            }`}
+            onClick={() => {
+              if (!n.read) markRead({ id: n._id });
+            }}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium">{n.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{n.message}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {!n.read && (
+                  <span className="h-2 w-2 rounded-full bg-[#FF6B6B]" />
+                )}
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(n.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Admin Panel ────────────────────────
+function AdminPanel() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const stats = useQuery(api.users.getStats);
+  const allUsers = useQuery(api.users.listAll);
+  const sessions = useQuery(api.attendance.listSessions);
+  const assignments = useQuery(api.assignments.list);
+  const events = useQuery(api.events.list);
+  const placements = useQuery(api.placements.list);
+  const removeUser = useMutation(api.users.removeUser);
+  const updateRole = useMutation(api.users.updateRole);
+
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Shield className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">Admin access required</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Admin Panel</h2>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          { label: "Students", value: stats?.students ?? 0 },
+          { label: "Faculty", value: stats?.faculty ?? 0 },
+          { label: "Coordinators", value: stats?.coordinators ?? 0 },
+          { label: "Sessions", value: sessions?.length ?? 0 },
+          { label: "Assignments", value: assignments?.length ?? 0 },
+          { label: "Events", value: events?.length ?? 0 },
+          { label: "Placements", value: placements?.length ?? 0 },
+          { label: "Total Users", value: stats?.total ?? 0 },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl border border-border/50 bg-card p-3 text-center">
+            <div className="text-xl font-bold">{s.value}</div>
+            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* User Management */}
+      <div className="rounded-xl border border-border/50 bg-card p-4">
+        <h3 className="mb-3 font-medium flex items-center gap-2">
+          <UserCog className="h-4 w-4" />
+          User Management
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
+                <th className="pb-2 pr-4">Name</th>
+                <th className="pb-2 pr-4">Email</th>
+                <th className="pb-2 pr-4">Role</th>
+                <th className="pb-2 pr-4">Department</th>
+                <th className="pb-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!allUsers ? (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                    Loading…
+                  </td>
+                </tr>
+              ) : allUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                allUsers.slice(0, 50).map((u) => (
+                  <>
+                    <tr key={u._id} className="border-b border-border/30">
+                      <td className="py-2 pr-4 font-medium">{u.name || "—"}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{u.email || "—"}</td>
+                      <td className="py-2 pr-4">
+                        <span className="rounded-full bg-[#FF6B6B]/10 px-2 py-0.5 text-xs font-medium capitalize text-violet-600">
+                          {u.role || "—"}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-muted-foreground">{u.department || "—"}</td>
+                      <td className="py-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            onClick={() =>
+                              setExpandedUser(expandedUser === u._id ? null : u._id)
+                            }
+                          >
+                            <UserCog className="h-3 w-3" />
+                          </Button>
+                          {u._id !== user?._id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm(`Delete user ${u.name || u.email}?`)) {
+                                  removeUser({ targetUserId: u._id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedUser === u._id && (
+                      <tr key={`${u._id}-edit`}>
+                        <td colSpan={5} className="py-2 px-4 bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">Change role:</span>
+                            {(["student", "faculty", "coordinator", "admin"] as const).map(
+                              (role) => (
+                                <Button
+                                  key={role}
+                                  size="sm"
+                                  variant={u.role === role ? "default" : "ghost"}
+                                  className="h-7 text-xs capitalize"
+                                  onClick={() =>
+                                    updateRole({
+                                      targetUserId: u._id,
+                                      role,
+                                    })
+                                  }
+                                >
+                                  {role}
+                                </Button>
+                              ),
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────── Global Search ────────────────────────
+function GlobalSearchPanel() {
+  const [query, setQuery] = useState("");
+  const announcements = useQuery(
+    api.announcements.search,
+    query.length > 1 ? { query } : "skip",
+  );
+  const events = useQuery(api.events.list);
+  const placements = useQuery(api.placements.list);
+  const assignments = useQuery(api.assignments.list);
+
+  const q = query.toLowerCase();
+  const matchedEvents = events?.filter(
+    (e) =>
+      e.title.toLowerCase().includes(q) ||
+      e.description.toLowerCase().includes(q) ||
+      e.venue.toLowerCase().includes(q),
+  );
+  const matchedPlacements = placements?.filter(
+    (p) =>
+      p.company.toLowerCase().includes(q) ||
+      p.jobRole.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q),
+  );
+  const matchedAssignments = assignments?.filter(
+    (a) =>
+      a.title.toLowerCase().includes(q) ||
+      a.subject.toLowerCase().includes(q) ||
+      a.description.toLowerCase().includes(q),
+  );
+
+  const totalResults =
+    (announcements?.length ?? 0) +
+    (matchedEvents?.length ?? 0) +
+    (matchedPlacements?.length ?? 0) +
+    (matchedAssignments?.length ?? 0);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Global Search</h2>
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search students, events, assignments, placements…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground"
+          autoFocus
+        />
+      </div>
+      {query.length > 1 && (
+        <p className="text-xs text-muted-foreground">{totalResults} result{totalResults !== 1 ? "s" : ""} found</p>
+      )}
+
+      {/* Announcements */}
+      {announcements && announcements.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Megaphone className="h-3.5 w-3.5" /> Announcements ({announcements.length})
+          </h3>
+          <div className="space-y-2">
+            {announcements.slice(0, 5).map((a) => (
+              <div key={a._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{a.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{a.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Events */}
+      {matchedEvents && matchedEvents.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5" /> Events ({matchedEvents.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedEvents.slice(0, 5).map((e) => (
+              <div key={e._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{e.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {e.venue} · {e.date}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Placements */}
+      {matchedPlacements && matchedPlacements.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Briefcase className="h-3.5 w-3.5" /> Placements ({matchedPlacements.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedPlacements.slice(0, 5).map((p) => (
+              <div key={p._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">
+                  {p.company} — {p.jobRole}
+                </p>
+                <p className="text-xs text-muted-foreground">CTC: {p.ctc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Assignments */}
+      {matchedAssignments && matchedAssignments.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" /> Assignments ({matchedAssignments.length})
+          </h3>
+          <div className="space-y-2">
+            {matchedAssignments.slice(0, 5).map((a) => (
+              <div key={a._id} className="rounded-lg border border-border/50 bg-card p-3">
+                <p className="text-sm font-medium">{a.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {a.subject} · Due {a.deadline}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {query.length > 1 && totalResults === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 py-12">
+          <Search className="mb-2 h-9 w-9 border-2 border-border text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">No results found for "{query}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────── Settings Panel ────────────────────────
+function SettingsPanel({ onSignOut }: { onSignOut: () => void }) {
+  const { user } = useAuth();
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Settings</h2>
+
+      {/* Profile */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Profile
+        </h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">Name:</span>{" "}
+            {user?.name || "Not set"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Email:</span>{" "}
+            {user?.email || "Not set"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Role:</span>{" "}
+            <span className="capitalize">{user?.role || "Not set"}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Department:</span>{" "}
+            {user?.department || "Not set"}
+          </div>
+          {user?.rollNumber && (
+            <div>
+              <span className="text-muted-foreground">Roll Number:</span>{" "}
+              {user.rollNumber}
+            </div>
+          )}
+          {user?.semester && (
+            <div>
+              <span className="text-muted-foreground">Semester:</span>{" "}
+              {user.semester}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Preferences */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Settings className="h-4 w-4" />
+          Preferences
+        </h3>
+        <div className="flex items-center justify-between text-sm">
+          <span>Dark Mode</span>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+        <h3 className="font-medium flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Account
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Sign out of your Campus Hub account on this device.
+        </p>
+        <Button
+          variant="outline"
+          className="text-destructive hover:text-destructive"
+          onClick={onSignOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────── Tab Panels Map ────────────────────────
+function tabPanels(activeTab: Tab): ReactNode {
+  switch (activeTab) {
+    case "announcements":
+      return <AnnouncementsTab />;
+    case "attendance":
+      return <AttendanceTab />;
+    case "assignments":
+      return <AssignmentsTab />;
+    case "events":
+      return <EventsTab />;
+    case "placements":
+      return <PlacementsTab />;
+    case "notifications":
+      return <NotificationsTab />;
+    case "admin":
+      return <AdminPanel />;
+    case "search":
+      return <GlobalSearchPanel />;
+    case "settings":
+      return <SettingsPanel onSignOut={() => {}} />;
+    default:
+      return <AnnouncementsTab />;
+  }
+}
+
+// ──────────────────────── Main Dashboard ────────────────────────
+export default function Dashboard() {
+  const { user, signOut, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>("announcements");
+  const unreadCount = useQuery(api.notifications.unreadCount);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.role) return <RoleSelection />;
+
+  const isFaculty =
+    user.role === "faculty" || user.role === "admin" || user.role === "coordinator";
+  let availableTabs: readonly string[];
+  switch (user.role) {
+    case "admin":
+      availableTabs = adminTabs;
+      break;
+    case "coordinator":
+      availableTabs = coordinatorTabs;
+      break;
+    case "faculty":
+      availableTabs = facultyTabs;
+      break;
+    default:
+      availableTabs = studentTabs;
+  }
+
+  const roleLabel =
+    user.role === "admin"
+      ? "Administrator"
+      : user.role === "coordinator"
+        ? "Coordinator"
+        : user.role === "faculty"
+          ? "Faculty"
+          : "Student";
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg brutal-yellow border-2 border-border brutal-shadow-sm">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-extrabold tracking-tight uppercase">Campus Hub</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="hidden sm:inline text-xs font-extrabold uppercase text-muted-foreground">{roleLabel}</span>
+            <ThemeToggle />
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative h-9 w-9 border-2 border-border"
+              onClick={() => setActiveTab("notifications")}
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount !== undefined && unreadCount > 0 && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#FF6B6B]" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 border-2 border-border"
+              onClick={() => setActiveTab("search")}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-9 w-9 border-2 border-border"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
+        {/* Welcome */}
+        <div className="mb-4">
+          <h1 className="text-xl font-black tracking-tight uppercase">
+            Welcome{user.name ? `, ${user.name}` : ""}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {isFaculty
+              ? "Manage your campus modules from the tabs below."
+              : "Browse announcements, track attendance, and explore opportunities."}
+          </p>
+        </div>
+
+        {/* Tab Navigation */}
+        <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-muted/50 p-1">
+          {availableTabs.map((tab) => {
+            const cfg = tabConfig[tab];
+            if (!cfg) return null;
+            const Icon = cfg.icon;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as Tab)}
+                className={`flex items-center gap-1.5 border-2 px-3 py-2 text-xs font-extrabold uppercase whitespace-nowrap transition-colors ${
+                  activeTab === tab
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {cfg.label}
+                {tab === "notifications" && unreadCount !== undefined && unreadCount > 0 && (
+                  <span className="ml-1 h-4 w-4 rounded-full bg-[#FF6B6B] text-[9px] font-bold text-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setActiveTab("search")}
+            className={`flex items-center gap-1.5 border-2 px-3 py-2 text-xs font-extrabold uppercase whitespace-nowrap transition-colors ${
+              activeTab === "search"
+                ? "border-foreground bg-foreground text-background"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Search className="h-3.5 w-3.5" />
+            Search
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`ml-auto flex items-center gap-1.5 border-2 px-3 py-2 text-xs font-extrabold uppercase whitespace-nowrap transition-colors ${
+              activeTab === "settings"
+                ? "border-foreground bg-foreground text-background"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Settings
+          </button>
+        </nav>
+
+        {/* Tab Content */}
+        <div>{tabPanels(activeTab)}</div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
